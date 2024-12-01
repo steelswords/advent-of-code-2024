@@ -7,7 +7,7 @@
 struct TwoListsOfInts
 {
 public:
-    using SetType = std::set<int>;
+    using SetType = std::multiset<int>;
 
     SetType first;
     SetType second;
