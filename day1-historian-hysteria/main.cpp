@@ -1,3 +1,5 @@
+#include <cassert>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <set>
@@ -19,6 +21,8 @@ public:
     }
 
     void InitFromFile(const std::string &fileName);
+
+    long long TotalDistances() const;
 
 
     friend std::ostream& operator<<(std::ostream& out, const TwoListsOfInts &lists);
@@ -69,6 +73,21 @@ std::ostream& operator<<(std::ostream& out, const TwoListsOfInts &lists)
     return out;
 }
 
+long long TwoListsOfInts::TotalDistances() const
+{
+    // This simplifies things a bit.
+    assert(first.size() == second.size());
+
+    long long total = 0;
+    using ItType = TwoListsOfInts::SetType::const_iterator;
+    for ( ItType firstIt = first.cbegin(), secondIt = second.cbegin();
+            firstIt != first.cend() && secondIt != second.cend();
+            firstIt++, secondIt++)
+    {
+        total += std::llabs(*firstIt - *secondIt);
+    }
+    return total;
+}
 
 int main(int argc, char *argv[])
 {
@@ -82,5 +101,7 @@ int main(int argc, char *argv[])
     lists.InitFromFile(argv[1]);
 
     std::cout << "The list is as follows:\n" << lists << std::endl;
+
+    std::cout << "The total distance is: " << lists.TotalDistances() << std::endl;
     return 0;
 }
