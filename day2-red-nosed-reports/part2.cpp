@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <functional>
 
 
 class ReactorReport
@@ -22,8 +23,34 @@ public:
     // Returns true if the differences between levels are at least one and at most three
     bool AreAllLevelChangesGradual() const;
 
+    // Returns true if IsSafe() with at most 1 level removed.
+    bool IsSafeWithTolerance() const;
+
+    // Checks if the isValidPredicate is valid for all of the pairs of levels or
+    // all pairs, but with one level removed.
+    bool CheckConditionWithTolerance(std::function<bool(int,int)> isValidPredicate, std::string debugMessage = "?") const;
+
     bool IsSafe() const;
+    friend std::ostream &operator<<(std::ostream &out, const ReactorReport &report);
 };
+
+std::ostream &operator<<(std::ostream &out, const ReactorReport &report)
+{
+    bool firsttime = true;
+    for (int i : report.levels)
+    {
+        if (firsttime)
+        {
+            firsttime = !firsttime;
+        }
+        else
+        {
+            out << " ";
+        }
+        out << i;
+    }
+    return out;
+}
 
 struct SafetyReport
 {
@@ -34,6 +61,78 @@ struct SafetyReport
 bool ReactorReport::IsSafe() const
 {
     return AreAllLevelChangesGradual() && (AreAllLevelsDecreasing() || AreAllLevelsIncreasing());
+}
+
+bool ReactorReport::CheckConditionWithTolerance(std::function<bool(int,int)> isValidPredicate, std::string debugMessage) const
+{
+    std::cout << "Checking condition " << debugMessage << " on report " << *this << std::endl;
+    bool doesConditionHold = true;
+    bool doesConditionHoldWithTolerance = true;
+    bool neededARemoval = false;
+    std::vector<int>::const_iterator it = levels.cbegin();
+    std::vector<int>::const_iterator prevIt = levels.cbegin();
+    for (; it < levels.cend() && prevIt < levels.cend(); it++, prevIt++)
+    {
+        if (isValidPredicate(*prevIt, *it))
+        {
+            std::cout << "Valid for " << *prevIt << " to " << *it << std::endl;
+            continue;
+        }
+        else
+        {
+            std::cout << "INvalid for " << *prevIt << " to " << *it << "; checking if we skip " << *it << std::endl;
+            doesConditionHold = false;
+            std::vector<int>::const_iterator nextIt = it + 1;
+            if (nextIt < levels.cend())
+            {
+                std::cout << "     Checking " << *prevIt << " to " << *nextIt << "... ";
+                // In this if statement we can check if we skip "this" and move
+                // to the "next" if the condition holds.
+                if (!isValidPredicate(*prevIt, *nextIt))
+                {
+                    std::cout << " NOT valid!" << std::endl;
+                    doesConditionHoldWithTolerance = false;
+                    continue;
+                }
+                else if (!neededARemoval) // Not valid predicate && haven't needed a removal yet.
+                {
+                    std::cout << " valid!" << std::endl;
+                    doesConditionHoldWithTolerance = true;
+                    neededARemoval = true;
+                    continue;
+                }
+            }
+            else // Can't get a next iterator.
+            {
+                std::cout << "At end of line, can't check if we skip." << std::endl;
+                doesConditionHoldWithTolerance = false;
+                return false;
+            }
+#if 0
+            std::vector<int>::const_iterator prevPrevIt = prevIt - 1;
+            if (prevPrevIt >= levels.cbegin() && prevPrevIt < levels.cend())
+            {
+
+            }
+#endif
+        }
+    }
+
+    return doesConditionHold || doesConditionHoldWithTolerance;
+}
+
+bool ReactorReport::IsSafeWithTolerance() const
+{
+    auto isChangeGradual = [](int first, int second) {
+        int difference = std::abs(second - first);
+        bool valid = difference >= 1 && difference <= 3;
+        return valid;
+    };
+
+    return CheckConditionWithTolerance(isChangeGradual) &&
+        ( CheckConditionWithTolerance([](int a, int b) { return a < b; }) ||
+          CheckConditionWithTolerance([](int a, int b) { return a > b; })
+        );
 }
 
 ReactorReport::ReactorReport(const std::string &line)
@@ -66,6 +165,7 @@ bool ReactorReport::AreAllLevelsDecreasing() const
     }
     return true;
 }
+
 bool ReactorReport::AreAllLevelsIncreasing() const
 {
     auto prevIt = levels.cbegin();
@@ -109,7 +209,7 @@ SafetyReport CheckSafety(const std::vector<ReactorReport> reports)
     SafetyReport safetyReport;
     for (const auto &report : reports)
     {
-        if (report.IsSafe())
+        if (report.IsSafeWithTolerance())
         {
             safetyReport.safeReports.emplace_back(report);
         }
