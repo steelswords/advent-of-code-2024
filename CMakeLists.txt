@@ -6,3 +6,4 @@ set(CMAKE_BUILD_TYPE Debug)
 
 add_subdirectory(day1-historian-hysteria)
 add_subdirectory(day2-red-nosed-reports)
+add_subdirectory(day3-mull-it-over)
