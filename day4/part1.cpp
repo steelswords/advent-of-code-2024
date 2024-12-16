@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -45,6 +46,19 @@ WordSearch::WordSearchMatches WordSearch::FindMatches(const std::string &searchT
 {
     WordSearchMatches matches {};
     // TODO
+    
+    // Go in each direction first...
+    // Check each direction for forwards and backwards string.
+    // Horizontally
+    // Vertically
+    // Diagonally, L -> R
+    // Diagonally, R -> L        <-- We only have to do two kinds of diagonal since we're checking for the inverse of the searchTerm too.
+
+    std::string invertedSearchTerm = searchTerm;
+    std::reverse(invertedSearchTerm.begin(), invertedSearchTerm.end());
+
+
+
     return matches;
 }
 
