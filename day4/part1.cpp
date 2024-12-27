@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 #include <vector>
 #include <boost/log/trivial.hpp>
 
@@ -44,6 +45,19 @@ public:
               direction(direction)
         { }
     };
+
+    char GetChar(const size_t x, const size_t y) const
+    {
+        if (y >= lines.size())
+        {
+            throw std::invalid_argument("y-coordinate " + std::to_string(y) + " is out of bounds");
+        }
+        if (x >= lines[y].size())
+        {
+            throw std::invalid_argument("x-coordinate " + std::to_string(x) + " is out of bounds");
+        }
+        return lines[y][x];
+    }
 
     /** Checks in `direction` to see if the next few characters match `searchTerm`
      * starting at `x`, `y`. Returns true if it is a match, false if not a match
@@ -296,21 +310,63 @@ bool StepCoordinate(const WordSearch &ws, size_t &x, size_t &y, MatchDirection d
             y++;
             break;
         case MatchDirection::DiagonalStartLeftGoUp:
-            if (y == 0 || x +1 > maxWidth)
+            if (y == 0 || x + 1 > maxWidth)
                 return false;
             y--;
             x++;
             break;
         case MatchDirection::DiagonalStartRightGoDown:
             // TODO
+            if (y >= maxHeight || x == 0)
+            {
+                return false;
+            }
+            y++;
+            x--;
             break;
         case MatchDirection::DiagonalStartRightGoUp:
             // TODO
+            if (y == 0 || x == 0)
+            {
+                return false;
+            }
+            y--;
+            x--;
             break;
         default:
-            std::cerr << "Can't figure it out! " << __func__ << ":" << __LINE__ << std::endl;
+            std::cerr << "****** ERROR Can't figure it out! " << __func__ << ":" << __LINE__ << std::endl;
+            return false;
             break;
     }
+    return true;
+}
+
+
+bool WordSearch::IsThereAMatch(size_t x, size_t y, const std::string &searchTerm, MatchDirection direction) const
+{
+    std::string wordSearchContent = "";
+    size_t i = 0;
+    for (size_t i = 0; i < searchTerm.size(); ++i)
+    {
+        try
+        {
+            wordSearchContent.push_back(GetChar(x,y));
+        }
+        catch (std::invalid_argument &e)
+        {
+            return false;
+        }
+        if (!StepCoordinate(*this, x, y, direction) && i + 1 != searchTerm.size())
+        {
+            std::cout << " Could not step coordinate from (" << x << ", " << y << ")\n";
+        }
+    }
+
+    if (wordSearchContent == searchTerm)
+    {
+        return true;
+    }
+    return false;
 }
 
 
@@ -391,4 +447,16 @@ int main(int argc, char* argv[])
     }
 
     WordSearch puzzle(argv[1]);
+
+    auto matches = puzzle.FindMatches("XMAS");
+    std::cout << "There are " << matches.size() << " matches!" << std::endl;
+
+#if 0
+    std::cout << "(0,0) = " << puzzle.GetChar(0,0)
+        << ", (1,1) = " << puzzle.GetChar(1,1)
+        << ", (2,1) = " << puzzle.GetChar(2,1)
+        << ", (1,2) = " << puzzle.GetChar(1,2)
+        << ", (3,3) = " << puzzle.GetChar(3,3)
+        << std::endl;
+#endif
 }
