@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <cstdio>
 #include <fstream>
@@ -200,12 +201,12 @@ int main(int argc, char* argv[])
 
     std::cout << printQueue << std::endl;
 
-    size_t validUpdates = 0;
+    std::vector<Update> validUpdates = {};
     for (const auto& update : printQueue.requestedUpdates)
     {
         if (printQueue.IsUpdateValid(update))
         {
-            validUpdates++;
+            validUpdates.push_back(update);
         }
         else
         {
@@ -214,7 +215,17 @@ int main(int argc, char* argv[])
     }
 
     std::cout << "Of the " << printQueue.requestedUpdates.size() << " updates requested, "
-        << validUpdates << " are valid." << std::endl;
+        << validUpdates.size() << " are valid." << std::endl;
+
+    // Find the middle numbers and add them up
+    uint64_t sumOfMiddlePageNumbers = 0;
+    for (const Update& update : validUpdates)
+    {
+        size_t middleIndex = (update.pagesToUpdate.size() - 1) / 2;
+        sumOfMiddlePageNumbers += update.pagesToUpdate[middleIndex];
+    }
+
+    std::cout << "The sum of the middle pages of the valid updates is " << sumOfMiddlePageNumbers << std::endl;
 
     return 0;
 }
