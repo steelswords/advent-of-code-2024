@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <cstdio>
@@ -181,6 +183,9 @@ Update PrintQueue::FixOrdering(const Update &invalidUpdate) const
     // For each page to update, search through  OrderingRequirements. If there are any that don't fit, rearrange.
     Update fixedUpdate = invalidUpdate;
 
+    std::chrono::time_point<std::chrono::steady_clock> startBruteForceTime = std::chrono::steady_clock::now();
+    auto lastCheckinTime = startBruteForceTime;
+    size_t numberIterations = 0, lastCheckinNumberIterations = 0;
     while (!IsUpdateValid(fixedUpdate))
     {
         // This is really stupid, but I bet it will work.
@@ -205,9 +210,36 @@ Update PrintQueue::FixOrdering(const Update &invalidUpdate) const
             }
         }
 #endif
+        numberIterations++;
+        auto now = std::chrono::steady_clock::now();
+        if (now - lastCheckinTime > std::chrono::seconds(2))
+        {
+            double iterationsPerSecond = (numberIterations - lastCheckinNumberIterations) / (double)(std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCheckinTime).count() / 1000.0f);
+
+            // Let s = pagesToUpdate.size()
+            // The number of possible permutations is sPs, or s!.
+            // The gamma function gives G(n) = (n-1)! for positive integers,
+            // thus the number of permutations is tgamma(s+1), and about how many iterations I would expect.
+            double predictedNumberOfIterationsNeeded = tgamma(fixedUpdate.pagesToUpdate.size() + 1);
+            double secsTillSuccess = (predictedNumberOfIterationsNeeded - numberIterations) / (iterationsPerSecond);
+            std::cout << "-> Still trying to get this update fixed.... Currently looking at " << fixedUpdate.pagesToUpdate
+                << ". I've been working on this for " << std::chrono::duration_cast<std::chrono::milliseconds>(now - startBruteForceTime).count()
+                << " ms. I've done " << numberIterations - lastCheckinNumberIterations << " iterations since last time, for a total of "
+                << numberIterations << " iterations total. That's " << iterationsPerSecond << " iterations per second. I expect to have to do "
+                << predictedNumberOfIterationsNeeded << " iterations total, so that means I'll be done with this around.... say.... "
+                << secsTillSuccess << "s from now."
+                << std::endl;
+
+            lastCheckinTime = now;
+            lastCheckinNumberIterations = numberIterations;
+        }
+
     }
 
-    std::cout << "-> Found corrected update order: " << fixedUpdate.pagesToUpdate << std::endl;
+    auto endBruteForceTime = std::chrono::steady_clock::now();
+    auto bruteForceDuration = endBruteForceTime - startBruteForceTime;
+    std::cout << "-> Found corrected update order: " << fixedUpdate.pagesToUpdate
+        << ". Brute forcing took " << std::chrono::duration_cast<std::chrono::milliseconds>(bruteForceDuration).count() << " ms" << std::endl;
 
     return fixedUpdate;
 
